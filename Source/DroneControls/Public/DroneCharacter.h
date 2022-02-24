@@ -7,7 +7,7 @@
 #include "GameFramework/Character.h"
 #include "DroneCharacter.generated.h"
 
-UCLASS()
+UCLASS(Config=Game)
 class DRONECONTROLS_API ADroneCharacter : public ACharacter
 {
 	GENERATED_BODY()
@@ -23,6 +23,9 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void BeginPlay() override;
+
+	UPROPERTY(EditDefaultsOnly)
+	float PerSecondMovement = 10.0f;
 
 protected:	
 	//Movement controls
@@ -125,6 +128,8 @@ private:
 	UFUNCTION()
 	void ClearScreenShotsDirectory() const;
 
+	void ClearRecordedData();
+
 	UPROPERTY()
 	bool IsRecording = false;
 	
@@ -150,8 +155,13 @@ private:
 	TArray<float> RecordedDistances;
 
 	UPROPERTY()
+	TArray<float> RecordedTimeRatios;
+
+	UPROPERTY()
 	TArray<FVector> RecorderVelocities;
 
-	
-
+	UPROPERTY(Config)
+	float CameraTargetFPS;
+	float CalculateTimeRatio(float DeltaTime) const;
+	float GetMovementValue(float InVal) const;
 };
