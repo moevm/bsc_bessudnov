@@ -67,7 +67,6 @@ DerivedDataCache/*
 
 # Do not have enough space in git repo so ignore everything execpt code
 Binaries/
-Config/
 Content/
 DerivedDataCache/
 Intermediate/
