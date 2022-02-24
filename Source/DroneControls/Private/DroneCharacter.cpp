@@ -59,6 +59,7 @@ void ADroneCharacter::Tick(float DeltaTime)
 		RecordedRotations.Add(UKismetMathLibrary::NormalizedDeltaRotator(DroneCamera->GetComponentRotation(), RecordStartRotation));
 		RecordedTimes.Add(RecordingTime);
 		RecordingTime += DeltaTime;
+		RecordedTimeRatios.Add(CalculateTimeRatio(DeltaTime));
 
 		const FVector StartTrace = GetActorLocation();
 		const FVector EndTrace = StartTrace + GetActorForwardVector() * 1000000.0f;
@@ -99,6 +100,7 @@ void ADroneCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 void ADroneCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	ClearRecordedData();
 	ClearScreenShotsDirectory();
 	RecordStartLocation = DroneCamera->GetComponentLocation();
 	RecordStartRotation = DroneCamera->GetComponentRotation();
@@ -106,17 +108,17 @@ void ADroneCharacter::BeginPlay()
 
 void ADroneCharacter::MoveForward(float Value)
 {
-	AddMovementInput(GetActorForwardVector(), Value);
+	AddMovementInput(GetActorForwardVector(), GetMovementValue(Value));
 }
 
 void ADroneCharacter::MoveUp(float Value)
 {
-	AddMovementInput(GetActorUpVector(), Value);
+	AddMovementInput(GetActorUpVector(), GetMovementValue(Value));
 }
 
 void ADroneCharacter::MoveRight(float Value)
 {
-	AddMovementInput(GetActorRightVector(), Value);
+	AddMovementInput(GetActorRightVector(), GetMovementValue(Value));
 }
 
 void ADroneCharacter::StartSectionRecord(int SectionIndex)
@@ -352,6 +354,9 @@ void ADroneCharacter::WriteInfoToFiles()
 	FString FileNameDistances = FPaths::ProjectDir();
 	FileNameDistances.Append(TEXT("distances.txt"));
 
+	FString FileNameTimeRatios = FPaths::ProjectDir();
+	FileNameTimeRatios.Append(TEXT("time_ratios.txt"));
+
 	// We will use this FileManager to deal with the file.
 	IPlatformFile& FileManager = FPlatformFileManager::Get().GetPlatformFile();
 
@@ -359,10 +364,16 @@ void ADroneCharacter::WriteInfoToFiles()
 	TArray<FString> TrajectoryStrings;
 	TArray<FString> VelocitiesStrings;
 	TArray<FString> DistancesStrings;
+	TArray<FString> TimeRatioStrings;
 
 	for (auto &TimeStep : RecordedTimes)
 	{
 		TimesStrings.Add(FString::SanitizeFloat(TimeStep));
+	}
+
+	for (const float& TimeRatio : RecordedTimeRatios)
+	{
+		TimeRatioStrings.Add(FString::SanitizeFloat(TimeRatio));
 	}
 
 	for (auto &Distance : RecordedDistances)
@@ -383,6 +394,11 @@ void ADroneCharacter::WriteInfoToFiles()
 	if (FileManager.FileExists(*FileNameTimes))
 	{
 		FFileHelper::SaveStringArrayToFile(TimesStrings, *FileNameTimes);
+	}
+
+	if (FileManager.FileExists(*FileNameTimeRatios))
+	{
+		FFileHelper::SaveStringArrayToFile(TimeRatioStrings, *FileNameTimeRatios);
 	}
 
 	if (FileManager.FileExists(*FileNameTrajectory))
@@ -411,3 +427,23 @@ void ADroneCharacter::ClearScreenShotsDirectory() const
 	FileManager.DeleteDirectoryRecursively(*ScreenshotsDirectoryName);
 }
 
+void ADroneCharacter::ClearRecordedData()
+{
+	RecordedLocations.Reset();
+	RecordedRotations.Reset();
+	RecordedTimes.Reset();
+	RecordedDistances.Reset();
+	RecordedTimeRatios.Reset();
+	RecorderVelocities.Reset();
+}
+
+float ADroneCharacter::CalculateTimeRatio(float DeltaTime) const
+{
+	const float CameraDeltaTime = 1 / CameraTargetFPS;
+	return DeltaTime / CameraDeltaTime;
+}
+
+float ADroneCharacter::GetMovementValue(float InVal) const
+{
+	return InVal * PerSecondMovement * GetWorld()->GetDeltaSeconds();
+}
